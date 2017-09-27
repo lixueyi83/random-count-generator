@@ -15,6 +15,12 @@
 
 
 
+typedef struct
+{
+    int count;
+    std::string timestamp;
+}COUNT_TIME_T;
+
 
 using namespace std;
 
@@ -32,7 +38,7 @@ class RandomCountGenerator
         
     private:
         std::mutex m_queue_mutex;
-        boost::circular_buffer<int> m_count_queue;
+        boost::circular_buffer<string> m_count_queue;
 };
 
 RandomCountGenerator::RandomCountGenerator(): 
@@ -51,6 +57,7 @@ RandomCountGenerator::~RandomCountGenerator()
 void RandomCountGenerator::generate_count_loop()
 {
 	int count;
+	COUNT_TIME_T ct;
 	
 	while(true)
 	{
@@ -66,10 +73,13 @@ void RandomCountGenerator::generate_count_loop()
 	        count = 2;
 	    else
 	        count = 1;
+	        
+	    std::time_t timestamp_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+	    string count_time_str = std::to_string(count) + ": " + std::ctime(&timestamp_);
 	
 	    {
 	        std::unique_lock<std::mutex> lk(m_queue_mutex);
-	        m_count_queue.push_back(count);
+	        m_count_queue.push_back(count_time_str);
 	    }
 	}
 }
@@ -105,22 +115,22 @@ void RandomCountGenerator::write_count_loop()
 {
     while(true)
     {
-        string num_time_str;
+        std::string count_time_str;
         
         std::unique_lock<std::mutex> lk(m_queue_mutex);
         {
             if(0 == m_count_queue.size()) 
                 continue;
-            
-            num_time_str = "\t*** " + std::to_string(m_count_queue[m_count_queue.size()-1]);
+            count_time_str = m_count_queue[m_count_queue.size()-1];
         }
-        std::time_t timestamp_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        
         std::ofstream out("output.txt");
-        num_time_str = num_time_str + ": @ " + std::ctime(&timestamp_);
-        out << num_time_str;
+        out << m_count_queue[m_count_queue.size()-1];
+        
         out.close();
     }
 }
+
 
 int main()
 {
