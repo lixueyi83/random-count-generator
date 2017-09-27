@@ -9,6 +9,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <iomanip>
+#include <thread>
 #include <mutex>
 #include <boost/circular_buffer.hpp>
 
@@ -29,6 +30,7 @@ class RandomCountGenerator
         void write_num_to_file();
         
     private:
+        std::mutex m_last_num_mutex;
         boost::circular_buffer<int> m_last_num_queue;
 };
 
@@ -94,13 +96,16 @@ double RandomCountGenerator::get_frequency(int num)
 
 void RandomCountGenerator::write_num_to_file()
 {
-    string num_time_str = "\t*** " + std::to_string(m_last_num_queue[m_last_num_queue.size()-1]);
-    
-    std::time_t timestamp_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    std::ofstream out("output.txt");
-    num_time_str = num_time_str + ": @ " + std::ctime(&timestamp_);
-    out << num_time_str;
-    out.close();
+    while(true)
+    {
+        string num_time_str = "\t*** " + std::to_string(m_last_num_queue[m_last_num_queue.size()-1]);
+        
+        std::time_t timestamp_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        std::ofstream out("output.txt");
+        num_time_str = num_time_str + ": @ " + std::ctime(&timestamp_);
+        out << num_time_str;
+        out.close();
+    }
 }
 
 int main()
