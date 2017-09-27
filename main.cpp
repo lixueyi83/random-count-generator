@@ -25,9 +25,10 @@ class RandomCountGenerator
         RandomCountGenerator();
         virtual ~RandomCountGenerator();
         
-        int generate_random_num();
-        double get_frequency(int num); 
+        void generate_count_loop();
         void write_count_loop();
+        
+        double get_frequency(int num); 
         
     private:
         std::mutex m_queue_mutex;
@@ -37,6 +38,7 @@ class RandomCountGenerator
 RandomCountGenerator::RandomCountGenerator(): 
                                           m_count_queue(100)
 {
+    std::thread generator_th = std::thread(&RandomCountGenerator::generate_count_loop, this);
     std::thread writer_th = std::thread(&RandomCountGenerator::write_count_loop, this);
 }
 
@@ -46,29 +48,30 @@ RandomCountGenerator::~RandomCountGenerator()
     
 }
 
-int RandomCountGenerator::generate_random_num()
+void RandomCountGenerator::generate_count_loop()
 {
 	int count;
 	
-	int random = rand() % 100;
-	
-	if(random < 5)
-	    count = 5;
-	else if(random < 10)
-	    count = 4;
-	else if(random < 25)
-	    count = 3;
-	else if(random < 50)
-	    count = 2;
-	else
-	    count = 1;
-	
+	while(true)
 	{
-	    std::unique_lock<std::mutex> lk(m_queue_mutex);
-	    m_count_queue.push_back(count);
-	}
+	    int random = rand() % 100;
 	
-	return count;
+	    if(random < 5)
+	        count = 5;
+	    else if(random < 10)
+	        count = 4;
+	    else if(random < 25)
+	        count = 3;
+	    else if(random < 50)
+	        count = 2;
+	    else
+	        count = 1;
+	
+	    {
+	        std::unique_lock<std::mutex> lk(m_queue_mutex);
+	        m_count_queue.push_back(count);
+	    }
+	}
 }
 
 
@@ -122,5 +125,4 @@ void RandomCountGenerator::write_count_loop()
 int main()
 {
     RandomCountGenerator obj;
-    obj.generate_random_num();
 }
