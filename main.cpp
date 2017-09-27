@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <cstdlib>
 #include <iomanip>
 #include <thread>
@@ -37,17 +38,27 @@ class RandomCountGenerator
         
     private:
         std::thread generator_th;   
-        std::thread writer_th;
+        //std::thread writer_th;
         std::mutex m_queue_mutex;
         boost::circular_buffer<string> m_count_queue;
         std::ofstream output_tream;
+        
+        std::thread writer1_th;
+        std::thread writer2_th;
+        std::thread writer3_th;
+        std::thread writer4_th;
+        std::thread writer5_th;
 };
 
 RandomCountGenerator::RandomCountGenerator(): 
                                           m_count_queue(100)
 {
     generator_th = std::thread(&RandomCountGenerator::generate_count_loop, this);
-    writer_th = std::thread(&RandomCountGenerator::write_count_loop, this);
+    writer1_th = std::thread(&RandomCountGenerator::write_count_loop, this);
+    writer2_th = std::thread(&RandomCountGenerator::write_count_loop, this);
+    writer3_th = std::thread(&RandomCountGenerator::write_count_loop, this);
+    writer4_th = std::thread(&RandomCountGenerator::write_count_loop, this);
+    writer5_th = std::thread(&RandomCountGenerator::write_count_loop, this);
 }
 
 
@@ -55,7 +66,12 @@ RandomCountGenerator::~RandomCountGenerator()
 {
     /*free allocated memoroes from heap if allocated previously*/
     generator_th.join();
-    writer_th.join();
+    //writer_th.join();
+    writer1_th.join();
+    writer2_th.join();
+    writer3_th.join();
+    writer4_th.join();
+    writer5_th.join();
 }
 
 void RandomCountGenerator::generate_count_loop()
@@ -81,7 +97,7 @@ void RandomCountGenerator::generate_count_loop()
 	        count = 1;
 	        
 	    timestamp_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-	    count_time_str = std::to_string(count) + ": " + std::ctime(&timestamp_);
+	    count_time_str = std::to_string(count) + "-" + std::ctime(&timestamp_);
 	
 	    {
 	        std::unique_lock<std::mutex> lk(m_queue_mutex);
@@ -125,6 +141,9 @@ void RandomCountGenerator::write_count_loop()
     while(true)
     {
         string count_time_str;
+        std::thread::id this_id = std::this_thread::get_id();
+        std::stringstream ss;
+        ss << this_id;
         
         {
             std::unique_lock<std::mutex> lk(m_queue_mutex);
@@ -136,7 +155,7 @@ void RandomCountGenerator::write_count_loop()
         
         std::ofstream outfile;
         outfile.open("count-timestamp.txt", std::ios_base::app);
-        outfile << count_time_str; 
+        outfile << "thread-id:" + ss.str() + ", count-timestamp: " + count_time_str; 
         
         cout << "write_count_loop: " << count_time_str << endl;
         sleep(1);
