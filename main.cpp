@@ -27,16 +27,17 @@ class RandomCountGenerator
         
         int generate_random_num();
         double get_frequency(int num); 
-        void write_num_to_file();
+        void write_count_loop();
         
     private:
-        std::mutex m_last_num_mutex;
-        boost::circular_buffer<int> m_last_num_queue;
+        std::mutex m_queue_mutex;
+        boost::circular_buffer<int> m_count_queue;
 };
 
-RandomCountGenerator::RandomCountGenerator(): m_last_num_queue(100)
+RandomCountGenerator::RandomCountGenerator(): 
+                                          m_count_queue(100)
 {
-    
+    std::thread writer_th = std::thread(&RandomCountGenerator::write_count_loop, this);
 }
 
 
@@ -47,24 +48,27 @@ RandomCountGenerator::~RandomCountGenerator()
 
 int RandomCountGenerator::generate_random_num()
 {
-	int ret;
+	int count;
 	
 	int random = rand() % 100;
 	
 	if(random < 5)
-	    ret = 5;
+	    count = 5;
 	else if(random < 10)
-	    ret = 4;
+	    count = 4;
 	else if(random < 25)
-	    ret = 3;
+	    count = 3;
 	else if(random < 50)
-	    ret = 2;
+	    count = 2;
 	else
-	    ret = 1;
+	    count = 1;
 	
-	m_last_num_queue.push_back(ret);
+	{
+	    std::unique_lock<std::mutex> lk(m_queue_mutex);
+	    m_count_queue.push_back(count);
+	}
 	
-	return ret;
+	return count;
 }
 
 
@@ -94,12 +98,19 @@ double RandomCountGenerator::get_frequency(int num)
     return ret;
 }
 
-void RandomCountGenerator::write_num_to_file()
+void RandomCountGenerator::write_count_loop()
 {
     while(true)
     {
-        string num_time_str = "\t*** " + std::to_string(m_last_num_queue[m_last_num_queue.size()-1]);
+        string num_time_str;
         
+        std::unique_lock<std::mutex> lk(m_queue_mutex);
+        {
+            if(0 == m_count_queue.size()) 
+                continue;
+            
+            num_time_str = "\t*** " + std::to_string(m_count_queue[m_count_queue.size()-1]);
+        }
         std::time_t timestamp_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
         std::ofstream out("output.txt");
         num_time_str = num_time_str + ": @ " + std::ctime(&timestamp_);
