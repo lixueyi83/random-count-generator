@@ -14,7 +14,6 @@
 #include <boost/circular_buffer.hpp>
 
 
-
 typedef struct
 {
     int count;
@@ -41,6 +40,7 @@ class RandomCountGenerator
         std::thread writer_th;
         std::mutex m_queue_mutex;
         boost::circular_buffer<string> m_count_queue;
+        std::ofstream output_tream;
 };
 
 RandomCountGenerator::RandomCountGenerator(): 
@@ -121,7 +121,7 @@ double RandomCountGenerator::get_frequency(int num)
 }
 
 void RandomCountGenerator::write_count_loop()
-{
+{   
     while(true)
     {
         string count_time_str;
@@ -132,11 +132,12 @@ void RandomCountGenerator::write_count_loop()
                 continue;
             count_time_str = m_count_queue[m_count_queue.size()-1];
         }
+               
         
-        std::ofstream out("output.txt");
-        out << count_time_str;
-        out.close();
-
+        std::ofstream outfile;
+        outfile.open("count-timestamp.txt", std::ios_base::app);
+        outfile << count_time_str; 
+        
         cout << "write_count_loop: " << count_time_str << endl;
         sleep(1);
     }
