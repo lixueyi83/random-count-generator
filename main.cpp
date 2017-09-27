@@ -37,6 +37,8 @@ class RandomCountGenerator
         double get_frequency(int num); 
         
     private:
+        std::thread generator_th;   
+        std::thread writer_th;
         std::mutex m_queue_mutex;
         boost::circular_buffer<string> m_count_queue;
 };
@@ -44,23 +46,27 @@ class RandomCountGenerator
 RandomCountGenerator::RandomCountGenerator(): 
                                           m_count_queue(100)
 {
-    std::thread generator_th = std::thread(&RandomCountGenerator::generate_count_loop, this);
-    std::thread writer_th = std::thread(&RandomCountGenerator::write_count_loop, this);
+    generator_th = std::thread(&RandomCountGenerator::generate_count_loop, this);
+    writer_th = std::thread(&RandomCountGenerator::write_count_loop, this);
 }
 
 
 RandomCountGenerator::~RandomCountGenerator()
 {
-    
+    /*free allocated memoroes from heap if allocated previously*/
+    generator_th.join();
+    writer_th.join();
 }
 
 void RandomCountGenerator::generate_count_loop()
 {
 	int count;
-	COUNT_TIME_T ct;
 	
 	while(true)
 	{
+	    string count_time_str;
+	    std::time_t timestamp_;
+	    
 	    int random = rand() % 100;
 	
 	    if(random < 5)
@@ -74,13 +80,16 @@ void RandomCountGenerator::generate_count_loop()
 	    else
 	        count = 1;
 	        
-	    std::time_t timestamp_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-	    string count_time_str = std::to_string(count) + ": " + std::ctime(&timestamp_);
+	    timestamp_ = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+	    count_time_str = std::to_string(count) + ": " + std::ctime(&timestamp_);
 	
 	    {
 	        std::unique_lock<std::mutex> lk(m_queue_mutex);
 	        m_count_queue.push_back(count_time_str);
 	    }
+
+	    cout << "generate_count_loop: " << count_time_str << endl;
+	    sleep(1);
 	}
 }
 
@@ -115,19 +124,21 @@ void RandomCountGenerator::write_count_loop()
 {
     while(true)
     {
-        std::string count_time_str;
+        string count_time_str;
         
-        std::unique_lock<std::mutex> lk(m_queue_mutex);
         {
+            std::unique_lock<std::mutex> lk(m_queue_mutex);
             if(0 == m_count_queue.size()) 
                 continue;
             count_time_str = m_count_queue[m_count_queue.size()-1];
         }
         
         std::ofstream out("output.txt");
-        out << m_count_queue[m_count_queue.size()-1];
-        
+        out << count_time_str;
         out.close();
+
+        cout << "write_count_loop: " << count_time_str << endl;
+        sleep(1);
     }
 }
 
