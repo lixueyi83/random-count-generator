@@ -1,7 +1,7 @@
 /*************************************************************************
 	> File Name: main.cpp
-	> Author: 
-	> Mail: 
+	> Author:   Xueyi Li
+	> Mail:     lixueyi83@gmail.com
 	> Created Time: Wed 27 Sep 2017 12:36:13 PM PDT
  ************************************************************************/
 
@@ -14,7 +14,14 @@
 #include <mutex>
 #include <boost/circular_buffer.hpp>
 
+using namespace std;
 
+
+/**************************************************************************
+*   This struct is designed for the data type for the circular buffer,
+*   Since we can use a simple string to do this, then we don't have to
+*   bother this way.
+*/
 typedef struct
 {
     int count;
@@ -22,9 +29,9 @@ typedef struct
 }COUNT_TIME_T;
 
 
-using namespace std;
-
-
+/**************************************************************************
+*   RandomCountGenerator class declaration
+*/
 class RandomCountGenerator
 {
     public:
@@ -50,6 +57,9 @@ class RandomCountGenerator
         std::thread writer5_th;
 };
 
+/**************************************************************************
+*   RandomCountGenerator constructor
+*/
 RandomCountGenerator::RandomCountGenerator(): 
                                           m_count_queue(100)
 {
@@ -61,7 +71,10 @@ RandomCountGenerator::RandomCountGenerator():
     writer5_th = std::thread(&RandomCountGenerator::write_count_loop, this);
 }
 
-
+/**************************************************************************
+*   RandomCountGenerator destructor\
+*   join thread, free memory and close file
+*/
 RandomCountGenerator::~RandomCountGenerator()
 {
     /*free allocated memoroes from heap if allocated previously*/
@@ -74,6 +87,10 @@ RandomCountGenerator::~RandomCountGenerator()
     writer5_th.join();
 }
 
+/**************************************************************************
+*   generate_count_loop
+*   
+*/
 void RandomCountGenerator::generate_count_loop()
 {
 	int count;
@@ -109,7 +126,10 @@ void RandomCountGenerator::generate_count_loop()
 	}
 }
 
-
+/**************************************************************************
+*   get_frequency
+*   
+*/
 double RandomCountGenerator::get_frequency(int num)
 {
     double ret = 0;
@@ -136,6 +156,10 @@ double RandomCountGenerator::get_frequency(int num)
     return ret;
 }
 
+/**************************************************************************
+*   write_count_loop
+*   
+*/
 void RandomCountGenerator::write_count_loop()
 {   
     while(true)
@@ -152,7 +176,6 @@ void RandomCountGenerator::write_count_loop()
             count_time_str = m_count_queue[m_count_queue.size()-1];
         }
                
-        
         std::ofstream outfile;
         outfile.open("count-timestamp.txt", std::ios_base::app);
         outfile << "thread-id:" + ss.str() + ", count-timestamp: " + count_time_str; 
@@ -162,6 +185,10 @@ void RandomCountGenerator::write_count_loop()
     }
 }
 
+/**************************************************************************
+*   main entrance
+*   
+*/
 
 int main()
 {
